@@ -1,0 +1,47 @@
+name: windsurf_python2_7
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - bzip2=1.0.8=h0c8e037_2
+  - ca-certificates=2020.12.5=h5b45459_0
+  - certifi=2019.11.28=py27h8c360ce_1
+  - cftime=1.1.1=py27he4ed588_0
+  - curl=7.65.3=h2f83ebf_0
+  - hdf4=4.2.13=ha32470c_1003
+  - hdf5=1.10.3=h95ae18b_1001
+  - intel-openmp=2020.3=h57928b3_311
+  - jpeg=9c=h0c8e037_1001
+  - krb5=1.16.4=h7fea353_0
+  - libblas=3.9.0=8_mkl
+  - libcblas=3.9.0=8_mkl
+  - libcurl=7.65.3=h2f83ebf_0
+  - liblapack=3.9.0=8_mkl
+  - libnetcdf=4.6.1=h376332d_1010
+  - libssh2=1.8.2=hd5c6ab6_2
+  - mkl=2020.4=hb70f87d_311
+  - netcdf4=1.4.2=py27h6bbc3c5_1000
+  - openssl=1.1.1e=h0c8e037_0
+  - pip=20.1.1=pyh9f0ad1d_0
+  - python=2.7.15=h2880e7c_1011_cpython
+  - python_abi=2.7=1_cp27m
+  - setuptools=44.0.0=py27_0
+  - tk=8.6.10=h0c8e037_0
+  - vc=9=h7299396_1
+  - vs2008_runtime=9.0.30729.6161=0
+  - wheel=0.36.2=pyhd3deb0d_0
+  - wincertstore=0.2=py27_1003
+  - zlib=1.2.11=h3cc03e0_1006
+  - pip:
+    - bmi==1.0.0
+    - bmi-python==0.3.0
+    - docopt==0.6.1
+    - docopts==0.6.1
+    - faulthandler==3.2
+    - mako==1.1.4
+    - markupsafe==1.1.1
+    - numpy==1.16.6
+    - pywin32==228
+    - scipy==1.2.3
+    - six==1.15.0
+prefix: C:\Users\leijnse\AppData\Local\Continuum\anaconda3\envs\windsurf_python2_7
