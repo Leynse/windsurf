@@ -1,7 +1,7 @@
 depfile   = z.txt
 posdwn    = 0
-nx        = 374
-ny        = 0
+nx        = 499
+ny        = 49
 alfa      = 0
 vardx     = 1
 xfile     = x.txt

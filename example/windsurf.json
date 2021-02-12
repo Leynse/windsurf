@@ -4,21 +4,16 @@
         "stop"  : 31536000.0
     },
     "models" : {
-        "xbeach" : {
-            "engine" : "xbeachmi.model.XBeachMI",
-            "engine_path" : "/Users/hoonhout/Checkouts/XBeach/trunk/src/xbeachlibrary/.libs/",
-            "configfile" : "xbeachmi.json"
-        },
-        "aeolis" : {
-            "engine" : "aeolis",
-            "engine_path" : "/Users/hoonhout/Github/aeolis/src/.libs/",
+       "aeolis" : {
+            "engine" : "aeolis.model.AeoLiSRunner",
+            "engine_path" : "/Users/leijnse/AppData/Local/Continuum/anaconda3/envs/windsurf_python2_7/Lib/site-packages/aeolis/",  
             "configfile" : "aeolis.txt"
-        },
-        "cdm" : {
-            "engine" : "cdm",
-            "engine_path" : "/Users/hoonhout/Github/cdm/.libs/",
-            "configfile" : "cdm.txt"
-        }
+            },
+       "xbeach" : {
+                 "engine" : "xbeachmi.model.XBeachMI",
+                 "engine_path" : "/Users/leijnse/Models/XBeachX/",    
+                 "configfile" : "xbeachmi.json"
+        }            
     },
     "exchange" : [
         {
