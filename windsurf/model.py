@@ -213,12 +213,15 @@ class WindsurfWrapper:
         if times is not None:
             tr = np.asarray(times)
             if self.tlast > 0. and np.any((tr <= self.t) & (tr > self.tlast)):
+                logger.debug('Start writing restart file')
                 self.dump_restart_file()
+
                 if self.engine.get_config_value('restart', 'backup'):
+                    logger.debug('Start writing backup file')
                     self.create_backup()
 
         # write output if requested
-        if np.mod(self.t, self.engine.tout) < self.t - self.tlast:
+        if np.mod(self.t, self.engine.tout) < (self.t - self.tlast):
 
             outputfile = self.engine.get_config_value('netcdf', 'outputfile')
             outputvars = self.engine.get_config_value('netcdf', 'outputvars')
@@ -228,15 +231,26 @@ class WindsurfWrapper:
                 logger.debug('Writing output at t=%0.2f...' % self.t)
             
                 # get dimension data for each variable
-                variables = {v : self.engine.get_var(v) for v in outputvars}
-                variables['time'] = self.t
-        
+                logger.debug('Loading variables %s' % outputvars)
+
+                try:
+                    variables = {v : self.engine.get_var(v) for v in outputvars}
+
+                    logger.debug('Setting variable: Time')
+
+                    variables['time'] = self.t
+                except:
+                    logger.error('Error loading variables')
+
+                logger.debug('Finished loading variables')
+
                 netcdf.append(outputfile,
                               idx=self.iout,
                               variables=variables)
 
                 self.iout += 1
-            
+                logger.debug('Finished writing variables to %s' % outputfile)
+
             
     def load_restart_file(self):
         '''Load restart file from previous run'''
@@ -498,6 +512,8 @@ class Windsurf(IBmi):
     
     def get_var(self, name):
         '''Return array from model engine'''
+        logger.debug('Loading variable: %s' % name)
+
         engine, name = self._split_var(name)
         return self.models[engine]['_wrapper'].get_var(name).copy()
 
@@ -674,6 +690,7 @@ class Windsurf(IBmi):
         # finalize model engines
         for name, props in self.models.iteritems():
             self.models[name]['_wrapper'].finalize()
+            logger.debug('Finalize model engine: %s' % name)
 
 
     def _exchange_data(self, engine):

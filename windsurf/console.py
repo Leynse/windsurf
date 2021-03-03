@@ -1,12 +1,14 @@
+import os
 import docopt
 import logging
 from model import WindsurfWrapper
 from configurator import WindsurfConfigurator
 
+#if os.path.isfile("windsurf.log"):
+#    os.remove("windsurf.log")
 
 logging.basicConfig(filename='windsurf.log',
-                    format='%(asctime)-15s %(name)-8s %(levelname)-8s %(message)s')
-
+                    format='%(asctime)-15s %(name)-8s %(levelname)-8s %(message)s', level=logging.DEBUG)
 
 def windsurf():
     '''windsurf : a composite model for simulating integrated nearshore and aeolian sediment transport
