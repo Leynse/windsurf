@@ -624,6 +624,15 @@ class Windsurf(IBmi):
             e = self.models[engine]
             now = e['_time']
 
+            # calculate difference in zb when switching engines
+            try:
+                if engine != engine_last and engine_last is not None:
+
+                    self._calculate_difference(engine_last,engine)
+            except:
+                logger.error('Failed to calculate the difference in bedlevel after exchange from "%s" to "%s"!' % (engine_last, engine))
+                logger.error(traceback.format_exc())
+
             # exchange data if another model engine is selected
             try:
                 if engine != engine_last:
@@ -705,6 +714,58 @@ class Windsurf(IBmi):
                     except:
                         logger.error('Failed to set "%s" in "%s"!' % (var_to, engine_to))
                         logger.error(traceback.format_exc())
+
+    def _calculate_difference(self, engine_last, engine):
+        '''Calculate the difference of a variable when exchanging variables from one model engine to a given model engine
+
+        So far only for zb
+
+        Parameters
+        ----------
+        engine : str
+            model engine to write data to
+
+        '''
+        logger.debug('Initiate _calculate_difference')
+
+        var_from = u'zb' #TODO: also do for zs/make available for other variables?
+
+        try:
+            val1 = self.models[engine_last]['_wrapper'].get_var(var_from)
+        except:
+            logger.error('Failed to get "%s" from "%s"!' % (var_from, engine_last))
+            logger.error(traceback.format_exc())
+
+        try:
+            val2 = self.models[engine]['_wrapper'].get_var(var_from)
+        except:
+            logger.error('Failed to get "%s" from "%s"!' % (var_from, engine))
+            logger.error(traceback.format_exc())
+
+        try:
+            val3 = val2 - val1
+        except:
+            logger.error('Failed to get "%s" from "%s"!' % (var_from, engine))
+            logger.error(traceback.format_exc())
+
+        try:    # check whether difference_zb is already defined
+            if self.difference_zb is None:
+                logger.debug('self.difference_zb is None')
+        except:
+            self.difference_zb = val3
+            self.difference_zb_time = self.t
+            logger.debug('Initialize self.difference_zb for the first time')
+
+        try:
+            #TODO: add check for 1D/2D dimensions -> important when appending to 2D or 3D array, or axis=0 always works?
+            self.difference_zb = np.append(self.difference_zb, val3, axis=0)
+        except:
+            logger.error('Failed to append self.difference_zb')
+
+        try:
+            self.difference_zb_time = np.append(self.difference_zb_time, self.t)
+        except:
+            logger.error('Failed to append self.difference_zb_time')
 
     def _get_engine_maxlag(self):
         '''Get model engine with maximum lag from current time
