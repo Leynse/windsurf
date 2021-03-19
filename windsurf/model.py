@@ -176,6 +176,10 @@ class WindsurfWrapper:
         attributes = self.engine.get_config_value('netcdf', 'attributes')
         crs = self.engine.get_config_value('netcdf', 'crs')
 
+        # add zb difference variables
+        outputvars.append(u'difference_zb_aeolis')
+        outputvars.append(u'difference_zb_xbeach')
+
         if outputfile is not None and outputvars is not None:
             if not self.restart or not os.path.exists(outputfile):
 
@@ -239,6 +243,27 @@ class WindsurfWrapper:
                     netcdf.append(outputfile,
                               idx=self.iout,
                               variables=variables)
+                except:
+                    logger.error('Error writing variables')
+
+                # difference variables
+                #TODO: look at outputvars.append() option
+                try:
+                    difference_zb_aeolis = self.engine.models['aeolis']['_wrapper'].difference_zb
+                    difference_zb_xbeach = self.engine.models['xbeach']['_wrapper'].difference_zb
+                    #variables2 = {difference_zb_aeolis, difference_zb_xbeach}
+                    variables2 = {}
+                    variables2[u'difference_zb_aeolis'] = difference_zb_aeolis
+                    variables2[u'difference_zb_xbeach'] = difference_zb_xbeach
+                    variables2['time'] = self.t
+
+                except:
+                    logger.error('Error loading variables: difference_zb_aeolis/difference_zb_xbeach')
+
+                try:
+                    netcdf.append(outputfile,
+                              idx=self.iout,
+                              variables=variables2)
                 except:
                     logger.error('Error writing variables')
 
@@ -592,6 +617,9 @@ class Windsurf(IBmi):
             # initialize model engine
             self.models[name]['_wrapper'].initialize()
 
+            # initialize model engine
+            self.models[name]['_wrapper'].difference_zb = None
+
     def update(self, dt=-1):
         '''Step model engines into the future
 
@@ -626,9 +654,8 @@ class Windsurf(IBmi):
 
             # calculate difference in zb when switching engines
             try:
-                if engine != engine_last and engine_last is not None:
-
-                    self._calculate_difference(engine_last,engine)
+                if engine != engine_last: #and engine_last is not None:
+                    self._calculate_difference(engine)
             except:
                 logger.error('Failed to calculate the difference in bedlevel after exchange from "%s" to "%s"!' % (engine_last, engine))
                 logger.error(traceback.format_exc())
@@ -715,8 +742,9 @@ class Windsurf(IBmi):
                         logger.error('Failed to set "%s" in "%s"!' % (var_to, engine_to))
                         logger.error(traceback.format_exc())
 
-    def _calculate_difference(self, engine_last, engine):
-        '''Calculate the difference of a variable when exchanging variables from one model engine to a given model engine
+    def _calculate_difference(self, engine):
+        '''Calculate the difference of a variable when exchanging variables from one model engine to a given model engine,
+        save information per engine separately and cumulatively!
 
         So far only for zb
 
@@ -726,9 +754,15 @@ class Windsurf(IBmi):
             model engine to write data to
 
         '''
+
         logger.debug('Initiate _calculate_difference')
 
         var_from = u'zb' #TODO: also do for zs/make available for other variables?
+
+        if engine == u'aeolis':
+            engine_last = u'xbeach'
+        elif engine == u'xbeach':
+            engine_last = u'aeolis'
 
         try:
             val1 = self.models[engine_last]['_wrapper'].get_var(var_from)
@@ -749,23 +783,23 @@ class Windsurf(IBmi):
             logger.error(traceback.format_exc())
 
         try:    # check whether difference_zb is already defined
-            if self.difference_zb is None:
-                logger.debug('self.difference_zb is None')
+            if self.models[engine_last]['_wrapper'].difference_zb is None:
+                self.models[engine_last]['_wrapper'].difference_zb = val3
+                logger.debug('Initialize difference_zb for the first time')
         except:
-            self.difference_zb = val3
-            self.difference_zb_time = self.t
-            logger.debug('Initialize self.difference_zb for the first time')
+            logger.error('Error in initializing difference_zb for the first time')
 
         try:
             #TODO: add check for 1D/2D dimensions -> important when appending to 2D or 3D array, or axis=0 always works?
-            self.difference_zb = np.append(self.difference_zb, val3, axis=0)
+            self.models[engine_last]['_wrapper'].difference_zb += val3
+#            self.difference_zb = np.append(self.difference_zb, val3, axis=0)
         except:
             logger.error('Failed to append self.difference_zb')
 
-        try:
-            self.difference_zb_time = np.append(self.difference_zb_time, self.t)
-        except:
-            logger.error('Failed to append self.difference_zb_time')
+#        try:
+#            self.difference_zb_time = np.append(self.difference_zb_time, self.t)
+#        except:
+#            logger.error('Failed to append self.difference_zb_time')
 
     def _get_engine_maxlag(self):
         '''Get model engine with maximum lag from current time
@@ -898,7 +932,7 @@ class Windsurf(IBmi):
             dims = (u'time', u'y', u'x', u'layers')
         elif var in ['Cu', 'Ct', 'uth', 'supply', 'pickup', 'p']:
             dims = (u'time', u'y', u'x', u'fractions')
-        elif var in ['x', 'z', 'zb', 'zs', 'uw', 'udir', 'H']:
+        elif var in ['x', 'z', 'zb', 'zs', 'uw', 'udir', 'H','difference_zb_aeolis','difference_zb_xbeach']:
             dims = (u'time', u'y', u'x')
         elif var in []:
             dims = (u'time',)
