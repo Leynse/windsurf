@@ -245,17 +245,17 @@ class WindsurfWrapper:
 
                 try:
                     netcdf.append(outputfile,
-                              idx=self.iout,
-                              variables=variables)
+                                  idx=self.iout,
+                                  variables=variables)
                 except:
                     logger.error('Error writing variables')
 
                 # difference variables
-                #TODO: look at outputvars.append() option
+                # TODO: look at outputvars.append() option
                 try:
                     difference_zb_aeolis = self.engine.models['aeolis']['_wrapper'].difference_zb
                     difference_zb_xbeach = self.engine.models['xbeach']['_wrapper'].difference_zb
-                    #variables2 = {difference_zb_aeolis, difference_zb_xbeach}
+                    # variables2 = {difference_zb_aeolis, difference_zb_xbeach}
                     variables2 = {}
                     variables2[u'difference_zb_aeolis'] = difference_zb_aeolis
                     variables2[u'difference_zb_xbeach'] = difference_zb_xbeach
@@ -266,8 +266,8 @@ class WindsurfWrapper:
 
                 try:
                     netcdf.append(outputfile,
-                              idx=self.iout,
-                              variables=variables2)
+                                  idx=self.iout,
+                                  variables=variables2)
                 except:
                     logger.error('Error writing variables')
 
@@ -366,7 +366,7 @@ class WindsurfWrapper:
         if len(cfg_xbeach) > 0:
             if cfg_xbeach['ny'] == 0:  # no reshape needed if it's already a 1D model
                 dimensions['x'] = cfg_xbeach['xfile']
-                dimensions['y'] = cfg_xbeach['yfile'][0] # dimension should be 0
+                dimensions['y'] = cfg_xbeach['yfile'][0]  # dimension should be 0
             else:
                 dimensions['x'] = cfg_xbeach['xfile'].reshape(
                     (cfg_xbeach['ny'] + 1,
@@ -378,7 +378,7 @@ class WindsurfWrapper:
         elif len(cfg_aeolis) > 0:
             if cfg_aeolis['ny'] == 0:  # no reshape needed if it's already a 1D model
                 dimensions['x'] = cfg_aeolis['xgrid_file']
-                dimensions['y'] = cfg_aeolis['ygrid_file'][0] # dimension should be 0
+                dimensions['y'] = cfg_aeolis['ygrid_file'][0]  # dimension should be 0
             else:
                 dimensions['x'] = cfg_aeolis['xgrid_file'].reshape(
                     (cfg_aeolis['ny'] + 1,
@@ -658,10 +658,11 @@ class Windsurf(IBmi):
 
             # calculate difference in zb when switching engines
             try:
-                if engine != engine_last:# and engine_last is not None:
+                if engine != engine_last:  # and engine_last is not None:
                     self._calculate_difference(engine)
             except:
-                logger.error('Failed to calculate the difference in bedlevel after exchange from "%s" to "%s"!' % (engine_last, engine))
+                logger.error('Failed to calculate the difference in bedlevel after exchange from "%s" to "%s"!' % (
+                    engine_last, engine))
                 logger.error(traceback.format_exc())
 
             # exchange data if another model engine is selected
@@ -683,7 +684,7 @@ class Windsurf(IBmi):
             e['_time'] = e['_wrapper'].get_current_time()
             e['_target'] = e['_time']
 
-            #logger.debug(
+            # logger.debug(
             #    'Step engine "%s" from t=%0.2f to t=%0.2f into the future...' % (
             #        engine,
             #        now,
@@ -761,7 +762,7 @@ class Windsurf(IBmi):
 
         logger.debug('Initiate _calculate_difference')
 
-        var_from = u'zb' #TODO: also do for zs/make available for other variables?
+        var_from = u'zb'  # TODO: also do for zs/make available for other variables?
 
         if engine == u'aeolis':
             engine_last = u'xbeach'
@@ -783,32 +784,36 @@ class Windsurf(IBmi):
             logger.error(traceback.format_exc())
 
         try:
-            #val3 = val2 - val1
+            # val3 = val2 - val1
             val3 = val1 - val2
         except:
             logger.error('Failed to get "%s" from "%s"!' % (var_from, engine))
             logger.error(traceback.format_exc())
 
-        try:    # check whether difference_zb is already defined
-            if self.models[engine_last]['_wrapper'].difference_zb is None:
+        if self.models[engine_last]['_wrapper'].difference_zb is None:
+            try:  # check whether difference_zb is already defined
                 self.models[engine_last]['_wrapper'].difference_zb = val3
+                self.models[engine_last]['_wrapper'].difference_zb2 = val3
                 logger.debug('Initialize difference_zb for the first time')
-        except:
-            logger.error('Error in initializing difference_zb for the first time')
+            except:
+                logger.debug('Failed to initialize difference_zb for the first time')
+        else:
+            try:
+                self.models[engine_last]['_wrapper'].difference_zb += val3
+                np.append(self.models[engine_last]['_wrapper'].difference_zb2, val3, axis=0)
+            except:
+                logger.error('Failed to append self.difference_zb')
+            # TODO: add check for 1D/2D dimensions -> important when appending to 2D or 3D array, or axis=0 always works?
 
-        try:
-            #TODO: add check for 1D/2D dimensions -> important when appending to 2D or 3D array, or axis=0 always works?
-            self.models[engine_last]['_wrapper'].difference_zb += val3
-#            self.difference_zb = np.append(self.difference_zb, val3, axis=0)
-        except:
-            logger.error('Failed to append self.difference_zb')
+        logger.debug('max of val is "%s" and min "%s" and max of difference_zb "%s" and min "%s"' % (
+            np.amax(val3, axis=1), np.amin(val3, axis=1),
+            np.amax(self.models[engine_last]['_wrapper'].difference_zb, axis=1),
+            np.amin(self.models[engine_last]['_wrapper'].difference_zb, axis=1)))
 
-        logger.debug('max of val is "%s" and min "%s" and max of difference_zb "%s" and min "%s"' % (np.amax(val3, axis=1), np.amin(val3, axis=1), np.amax(self.models[engine_last]['_wrapper'].difference_zb, axis=1), np.amin(self.models[engine_last]['_wrapper'].difference_zb, axis=1)))
-
-#        try:
-#            self.difference_zb_time = np.append(self.difference_zb_time, self.t)
-#        except:
-#            logger.error('Failed to append self.difference_zb_time')
+    #        try:
+    #            self.difference_zb_time = np.append(self.difference_zb_time, self.t)
+    #        except:
+    #            logger.error('Failed to append self.difference_zb_time')
 
     def _get_engine_maxlag(self):
         '''Get model engine with maximum lag from current time
@@ -941,7 +946,7 @@ class Windsurf(IBmi):
             dims = (u'time', u'y', u'x', u'layers')
         elif var in ['Cu', 'Ct', 'uth', 'supply', 'pickup', 'p']:
             dims = (u'time', u'y', u'x', u'fractions')
-        elif var in ['x', 'z', 'zb', 'zs', 'uw', 'udir', 'H','difference_zb_aeolis','difference_zb_xbeach']:
+        elif var in ['x', 'z', 'zb', 'zs', 'uw', 'udir', 'H', 'difference_zb_aeolis', 'difference_zb_xbeach']:
             dims = (u'time', u'y', u'x')
         elif var in []:
             dims = (u'time',)
