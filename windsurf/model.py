@@ -191,6 +191,10 @@ class WindsurfWrapper:
                     for v in outputvars
                 }
 
+                # remove from outputvars, later calculated separately:
+                outputvars.remove(u'difference_zb_aeolis')
+                outputvars.remove(u'difference_zb_xbeach')
+
                 for v in variables.iterkeys():
                     logger.info('Creating netCDF output for "%s"' % v)
 
@@ -654,7 +658,7 @@ class Windsurf(IBmi):
 
             # calculate difference in zb when switching engines
             try:
-                if engine != engine_last: #and engine_last is not None:
+                if engine != engine_last:# and engine_last is not None:
                     self._calculate_difference(engine)
             except:
                 logger.error('Failed to calculate the difference in bedlevel after exchange from "%s" to "%s"!' % (engine_last, engine))
@@ -679,11 +683,11 @@ class Windsurf(IBmi):
             e['_time'] = e['_wrapper'].get_current_time()
             e['_target'] = e['_time']
 
-            logger.debug(
-                'Step engine "%s" from t=%0.2f to t=%0.2f into the future...' % (
-                    engine,
-                    now,
-                    e['_time']))
+            #logger.debug(
+            #    'Step engine "%s" from t=%0.2f to t=%0.2f into the future...' % (
+            #        engine,
+            #        now,
+            #        e['_time']))
 
             # determine target time step after first update
             if target_time is None and \
@@ -764,6 +768,8 @@ class Windsurf(IBmi):
         elif engine == u'xbeach':
             engine_last = u'aeolis'
 
+        logger.debug('engine: "%s" engine_last: "%s"' % (engine, engine_last))
+
         try:
             val1 = self.models[engine_last]['_wrapper'].get_var(var_from)
         except:
@@ -777,7 +783,8 @@ class Windsurf(IBmi):
             logger.error(traceback.format_exc())
 
         try:
-            val3 = val2 - val1
+            #val3 = val2 - val1
+            val3 = val1 - val2
         except:
             logger.error('Failed to get "%s" from "%s"!' % (var_from, engine))
             logger.error(traceback.format_exc())
@@ -795,6 +802,8 @@ class Windsurf(IBmi):
 #            self.difference_zb = np.append(self.difference_zb, val3, axis=0)
         except:
             logger.error('Failed to append self.difference_zb')
+
+        logger.debug('max of val is "%s" and min "%s" and max of difference_zb "%s" and min "%s"' % (np.amax(val3, axis=1), np.amin(val3, axis=1), np.amax(self.models[engine_last]['_wrapper'].difference_zb, axis=1), np.amin(self.models[engine_last]['_wrapper'].difference_zb, axis=1)))
 
 #        try:
 #            self.difference_zb_time = np.append(self.difference_zb_time, self.t)
