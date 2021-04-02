@@ -220,7 +220,7 @@ class WindsurfWrapper:
                     self.create_backup()
 
         # write output if requested
-        if np.mod(self.t, self.engine.tout) < (self.t - self.tlast):
+        if np.mod(self.t, self.engine.tout) < (self.t - self.tlast) or self.t == 0:
 
             outputfile = self.engine.get_config_value('netcdf', 'outputfile')
             outputvars = self.engine.get_config_value('netcdf', 'outputvars')
@@ -657,15 +657,18 @@ class Windsurf(IBmi):
             now = e['_time']
 
             # calculate difference in zb when switching engines
-            try:
-                if engine != engine_last:# and engine_last is not None:
-                    self._calculate_difference(engine)
-            except:
-                logger.error('Failed to calculate the difference in bedlevel after exchange from "%s" to "%s"!' % (
-                    engine_last, engine))
-                logger.error(traceback.format_exc())
+            #            try:
+            #               if engine != engine_last:# and engine_last is not None:
+            #                    self._calculate_difference(engine)
+            #            except:
+            #                logger.error('Failed to calculate the difference in bedlevel after exchange from "%s" to "%s"!' % (
+            #                    engine_last, engine))
+            #                logger.error(traceback.format_exc())
 
             # exchange data if another model engine is selected
+            var_from = u'zb'
+            val0 = self.models[engine]['_wrapper'].get_var(var_from)
+
             try:
                 if engine != engine_last:
                     self._exchange_data(engine)
@@ -673,12 +676,36 @@ class Windsurf(IBmi):
                 logger.error('Failed to exchange data from "%s" to "%s"!' % (engine_last, engine))
                 logger.error(traceback.format_exc())
 
+            # determine bed level pre update
+            var_from = u'zb'
+            val1 = self.models[engine]['_wrapper'].get_var(var_from)
+
             # step model engine in future
             try:
                 e['_wrapper'].update(dt)
             except:
                 logger.error('Failed to update "%s"!' % engine)
                 logger.error(traceback.format_exc())
+
+            val2 = self.models[engine]['_wrapper'].get_var(var_from)
+            val3 = val2 - val1
+            val4 = val2 - val0
+
+            if self.models[engine]['_wrapper'].difference_zb is None:
+                self.models[engine]['_wrapper'].difference_zb = np.zeros(val3.shape)
+                self.models[engine]['_wrapper'].difference_zb2 = np.zeros(val3.shape)
+                logger.debug('Initialize difference_zb!')
+
+            else:
+                # if engine != engine_last:
+                # self.models[engine]['_wrapper'].difference_zb += val3
+                # else:
+                if engine is engine_last:
+                    self.models[engine]['_wrapper'].difference_zb += val3
+
+                # logger.debug('max of val is "%s" and min "%s"' % (
+                # np.amax(val3, axis=1),
+                # np.amin(val3, axis=1)))
 
             # update time
             e['_time'] = e['_wrapper'].get_current_time()
@@ -783,18 +810,12 @@ class Windsurf(IBmi):
             logger.error('Failed to get "%s" from "%s"!' % (var_from, engine))
             logger.error(traceback.format_exc())
 
-        try:
-            # val3 = val2 - val1
-            val3 = val1 - val2
-        except:
-            logger.error('Failed to get "%s" from "%s"!' % (var_from, engine))
-            logger.error(traceback.format_exc())
-
         if self.models[engine_last]['_wrapper'].difference_zb is None:
             try:  # check whether difference_zb is already defined
                 self.models[engine_last]['_wrapper'].zbold = val1
                 self.models[engine_last]['_wrapper'].zbnew = val1
-                self.models[engine_last]['_wrapper'].difference_zb = np.zeros(self.models[engine_last]['_wrapper'].zbnew.shape)
+                self.models[engine_last]['_wrapper'].difference_zb = np.zeros(
+                    self.models[engine_last]['_wrapper'].zbnew.shape)
 
                 self.models[engine]['_wrapper'].zbold = val2
                 self.models[engine]['_wrapper'].zbnew = val2
@@ -807,21 +828,26 @@ class Windsurf(IBmi):
             try:
                 self.models[engine_last]['_wrapper'].zbold = self.models[engine_last]['_wrapper'].zbnew
                 self.models[engine_last]['_wrapper'].zbnew = val1
-                self.models[engine_last]['_wrapper'].difference_zb += self.models[engine_last]['_wrapper'].zbnew - self.models[engine_last]['_wrapper'].zbold
+                self.models[engine_last]['_wrapper'].difference_zb += (
+                            self.models[engine_last]['_wrapper'].zbnew - self.models[engine_last]['_wrapper'].zbold)
 
                 self.models[engine]['_wrapper'].zbold = self.models[engine]['_wrapper'].zbnew
                 self.models[engine]['_wrapper'].zbnew = val2
-                self.models[engine]['_wrapper'].difference_zb += self.models[engine]['_wrapper'].zbnew - self.models[engine]['_wrapper'].zbold
+                self.models[engine]['_wrapper'].difference_zb += (
+                            self.models[engine]['_wrapper'].zbnew - self.models[engine]['_wrapper'].zbold)
 
             except:
-                logger.error('Failed to append self.difference_zb')
+                logger.error('Failed to update self.difference_zb')
             # TODO: add check for 1D/2D dimensions -> important when appending to 2D or 3D array, or axis=0 always works?
-
-        logger.debug('max of val is "%s" and min "%s" and max of difference_zb "%s" and min "%s"' % (
+        logger.debug('max of val is "%s" and min "%s"' % (
             np.amax(self.models[engine_last]['_wrapper'].zbnew - self.models[engine_last]['_wrapper'].zbold, axis=1),
-            np.amin(self.models[engine_last]['_wrapper'].zbnew - self.models[engine_last]['_wrapper'].zbold, axis=1),
-            np.amax(self.models[engine_last]['_wrapper'].difference_zb, axis=1),
-            np.amin(self.models[engine_last]['_wrapper'].difference_zb, axis=1)))
+            np.amin(self.models[engine_last]['_wrapper'].zbnew - self.models[engine_last]['_wrapper'].zbold, axis=1)))
+
+        # logger.debug('max of val is "%s" and min "%s" and max of difference_zb "%s" and min "%s"' % (
+        #    np.amax(self.models[engine_last]['_wrapper'].zbnew - self.models[engine_last]['_wrapper'].zbold, axis=1),
+        #    np.amin(self.models[engine_last]['_wrapper'].zbnew - self.models[engine_last]['_wrapper'].zbold, axis=1),
+        #    np.amax(self.models[engine_last]['_wrapper'].difference_zb, axis=1),
+        #    np.amin(self.models[engine_last]['_wrapper'].difference_zb, axis=1)))
 
     #        try:
     #            self.difference_zb_time = np.append(self.difference_zb_time, self.t)
@@ -871,7 +897,7 @@ class Windsurf(IBmi):
             name of model engine
         str
             name of variable
-        
+
         Examples
         --------
         >>> self._split_var('xbeach.zb')
