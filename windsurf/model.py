@@ -658,7 +658,7 @@ class Windsurf(IBmi):
 
             # calculate difference in zb when switching engines
             try:
-                if engine != engine_last:  # and engine_last is not None:
+                if engine != engine_last:# and engine_last is not None:
                     self._calculate_difference(engine)
             except:
                 logger.error('Failed to calculate the difference in bedlevel after exchange from "%s" to "%s"!' % (
@@ -792,21 +792,34 @@ class Windsurf(IBmi):
 
         if self.models[engine_last]['_wrapper'].difference_zb is None:
             try:  # check whether difference_zb is already defined
-                self.models[engine_last]['_wrapper'].difference_zb = val3
-                self.models[engine_last]['_wrapper'].difference_zb2 = val3
+                self.models[engine_last]['_wrapper'].zbold = val1
+                self.models[engine_last]['_wrapper'].zbnew = val1
+                self.models[engine_last]['_wrapper'].difference_zb = np.zeros(self.models[engine_last]['_wrapper'].zbnew.shape)
+
+                self.models[engine]['_wrapper'].zbold = val2
+                self.models[engine]['_wrapper'].zbnew = val2
+                self.models[engine]['_wrapper'].difference_zb = np.zeros(self.models[engine]['_wrapper'].zbnew.shape)
+
                 logger.debug('Initialize difference_zb for the first time')
             except:
                 logger.debug('Failed to initialize difference_zb for the first time')
         else:
             try:
-                self.models[engine_last]['_wrapper'].difference_zb += val3
-                np.append(self.models[engine_last]['_wrapper'].difference_zb2, val3, axis=0)
+                self.models[engine_last]['_wrapper'].zbold = self.models[engine_last]['_wrapper'].zbnew
+                self.models[engine_last]['_wrapper'].zbnew = val1
+                self.models[engine_last]['_wrapper'].difference_zb += self.models[engine_last]['_wrapper'].zbnew - self.models[engine_last]['_wrapper'].zbold
+
+                self.models[engine]['_wrapper'].zbold = self.models[engine]['_wrapper'].zbnew
+                self.models[engine]['_wrapper'].zbnew = val2
+                self.models[engine]['_wrapper'].difference_zb += self.models[engine]['_wrapper'].zbnew - self.models[engine]['_wrapper'].zbold
+
             except:
                 logger.error('Failed to append self.difference_zb')
             # TODO: add check for 1D/2D dimensions -> important when appending to 2D or 3D array, or axis=0 always works?
 
         logger.debug('max of val is "%s" and min "%s" and max of difference_zb "%s" and min "%s"' % (
-            np.amax(val3, axis=1), np.amin(val3, axis=1),
+            np.amax(self.models[engine_last]['_wrapper'].zbnew - self.models[engine_last]['_wrapper'].zbold, axis=1),
+            np.amin(self.models[engine_last]['_wrapper'].zbnew - self.models[engine_last]['_wrapper'].zbold, axis=1),
             np.amax(self.models[engine_last]['_wrapper'].difference_zb, axis=1),
             np.amin(self.models[engine_last]['_wrapper'].difference_zb, axis=1)))
 
