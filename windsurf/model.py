@@ -711,11 +711,11 @@ class Windsurf(IBmi):
             e['_time'] = e['_wrapper'].get_current_time()
             e['_target'] = e['_time']
 
-            # logger.debug(
-            #    'Step engine "%s" from t=%0.2f to t=%0.2f into the future...' % (
-            #        engine,
-            #        now,
-            #        e['_time']))
+            logger.debug(
+               'Step engine "%s" from t=%0.2f to t=%0.2f into the future...' % (
+                   engine,
+                   now,
+                   e['_time']))
 
             # determine target time step after first update
             if target_time is None and \
